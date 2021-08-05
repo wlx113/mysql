@@ -216,6 +216,27 @@ CREATE TABLE animals (
  INSERT INTO animals (name) VALUES 
     ('dog'),('cat'),('penguin'),
     ('lax'),('whale'),('ostrich');
+    
+--------------------------------------------------
+mysql5.7英文版补充
+..#查看myslq提供的选项列表
+mysql--help
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
