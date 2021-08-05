@@ -1,1 +1,222 @@
-2021-8-5
+2021-8-5 .一个‘.’是在mysql内输入 ..两个‘..’是在root用户下输入
+#mysql不区分大小写
+.#查看mysql版本号和当前日期
+select version(),current_date;
+.#将mysql用作简单的计算器
+select sin(pi()/4),(4+1)*5;
+.#多个语句之间用分号隔开
+select version();select now();
+.#不必全在一个行内给出一个命令，较长命令可以输入到多个行中
+select
+->user()
+->,
+->corrent_date;
+.#中断一个正在输入的语句用\c，会自动切换回到mysql>
+.#创建并使用数据库 创建 create database 数据库名； 使用 user 数据库名； show databases;显示所在主机的所有数据库
+.#默认会加默认引擎 default charset utf8mb4
+CREATE DATABASE menagerie default charset utf8mb4;
+USE menagerie
+SHOW DATABASES;
+#进入数据库 mysql -u用户名 -p(可以输入密码) 可选数据库名（使用会直接进入数据库）
+mysql -uroot -proot meagerie 
+.#创建表 create table 表名（可加参数）；show tables；查看数据库中的表 describe 表名;查看表结构
+mysql> CREATE TABLE pet (name VARCHAR(20), owner VARCHAR(20),
+    -> species VARCHAR(20), sex CHAR(1), birth DATE, death DATE);
+SHOW TABLES;    
+DESCRIBE pet;
+.#将数据填充进表 insertinto 表名 values （，，，）；
+mysql> INSERT INTO pet
+    -> VALUES ('Puffball','Diane','hamster','f','1999-03-30',NULL);
+.#选择特殊行
+mysql> SELECT * FROM pet WHERE name = 'Bowser';
+mysql> SELECT * FROM pet WHERE birth > '1998-1-1';
+mysql> SELECT * FROM pet WHERE species = 'dog' AND sex = 'f'; AND 和
+mysql> SELECT * FROM pet WHERE species = 'snake' OR species = 'bird'; OR或者
+mysql> SELECT * FROM pet WHERE (species = 'cat' AND sex = 'm')
+    -> OR (species = 'dog' AND sex = 'f'); AND 和 OR同时使用 AND 比 OR具有更高的优先级
+.#选择特殊列 列之间逗号分隔
+mysql> SELECT name, birth FROM pet;
+mysql> SELECT owner FROM pet;
+mysql> SELECT DISTINCT owner FROM pet; DISTINCT检索唯一
+mysql> SELECT name, species, birth FROM pet
+    -> WHERE species = 'dog' OR species = 'cat'; 联合使用
+.#分类行 order by
+mysql> SELECT name, birth FROM pet ORDER BY birth; 按birth排序
+mysql> SELECT name, birth FROM pet ORDER BY birth DESC; DESC表示降序（默认为升序）
+多个列进行排序，可以按不同的方向对不同的列进行排序
+mysql> SELECT name, species, birth FROM pet 逗号分隔如下
+    -> ORDER BY species, birth DESC;
+.#日期计算 
+可以计算当前日期的年和出生日期之间的差。如果当前日期的日历年比出生日期早，则减去一年
+mysql> SELECT name, birth, CURDATE(),
+    -> (YEAR(CURDATE())-YEAR(birth))
+    -> - (RIGHT(CURDATE(),5)<RIGHT(birth,5))
+    -> AS age
+    -> FROM pet;
+按所需值进行排序
+mysql> SELECT name, birth, CURDATE(),
+    -> (YEAR(CURDATE())-YEAR(birth))
+    -> - (RIGHT(CURDATE(),5)<RIGHT(birth,5))
+    -> AS age
+    -> FROM pet ORDER BY age;
+计算死亡日期
+mysql> SELECT name, birth, death,
+    -> (YEAR(death)-YEAR(birth)) - (RIGHT(death,5)<RIGHT(birth,5))
+    -> AS age
+    -> FROM pet WHERE death IS NOT NULL ORDER BY age;
+查询使用death IS NOT NULL而非death != NULL，因为NULL是特殊的值，不能使用普通比较符来比较
+.#查月份 birth为出生日期，在数值满足的条件下根据出生日期查月份
+mysql> SELECT name, birth, MONTH(birth) FROM pet;
+DATE_ADD( )允许在一个给定的日期上加上时间间隔
+mysql> SELECT name, birth FROM pet
+    -> WHERE MONTH(birth) = MONTH(DATE_ADD(CURDATE(),INTERVAL 1 MONTH));
+利用12回滚的方法计算月份
+mysql> SELECT name, birth FROM pet
+    -> WHERE MONTH(birth) = MOD(MONTH(CURDATE()), 12) + 1;
+.#null值操作
+概念上，NULL意味着“没有值”或“未知值”，且它被看作与众不同的值
+请注意在MySQL中，0或 NULL意味着假而其它值意味着真。布尔运算的默认真值是1。
+执行ORDER BY时，如果运行 ORDER BY ... ASC，则NULL值出现在最前面，若运行ORDER BY ... DESC，则NULL值出现在最后面
+mysql> SELECT 0 IS NULL, 0 IS NOT NULL, '' IS NULL, '' IS NOT NULL;
+.#模式匹配
+mysql> SELECT * FROM pet WHERE name LIKE 'b%'; 以b开头
+mysql> SELECT * FROM pet WHERE name LIKE '%fy'; 以fy结尾
+mysql> SELECT * FROM pet WHERE name LIKE '%w%'; 其中包含w
+mysql> SELECT * FROM pet WHERE name LIKE '_____'; 找出正好包含5个字符的名字
+----------
+mysql> SELECT * FROM pet WHERE name REGEXP '^b'; 以b开头
+mysql> SELECT * FROM pet WHERE name REGEXP 'fy$'; 以fy结尾
+mysql> SELECT * FROM pet WHERE name REGEXP 'w'; 其中包含w
+mysql> SELECT * FROM pet WHERE name REGEXP '^.....$'; 找出正好包含5个字符的名字
+mysql> SELECT * FROM pet WHERE name REGEXP '^.{5}$'; 同上
+.#计数行
+mysql> SELECT COUNT(*) FROM pet; 计算总数
+mysql> SELECT owner, COUNT(*) FROM pet GROUP BY owner; 你检索了拥有宠物的人的名字。如果你想要知道每个主人有多少宠物
+注意，使用GROUP BY对每个owner的所有记录分组，没有它，你会得到错误消息：
+mysql> SELECT species, COUNT(*) FROM pet GROUP BY species; 例子
+mysql> SELECT sex, COUNT(*) FROM pet GROUP BY sex;例子
+mysql> SELECT species, sex, COUNT(*) FROM pet GROUP BY species, sex;例子
+若使用COUNT( )，你不必检索整个表
+mysql> SELECT species, sex, COUNT(*) FROM pet
+    -> WHERE species = 'dog' OR species = 'cat'
+    -> GROUP BY species, sex;
+例子
+mysql> SELECT species, sex, COUNT(*) FROM pet
+    -> WHERE sex IS NOT NULL
+    -> GROUP BY species, sex;
+.#使用两个表
+mysql> SELECT pet.name,
+    -> (YEAR(date)-YEAR(birth)) - (RIGHT(date,5)<RIGHT(birth,5)) AS age,
+    -> remark
+    -> FROM pet, event
+    -> WHERE pet.name = event.name AND event.type = 'litter';
+
+mysql> SELECT p1.name, p1.sex, p2.name, p2.sex, p1.species
+    -> FROM pet AS p1, pet AS p2
+    -> WHERE p1.species = p2.species AND p1.sex = 'f' AND p2.sex = 'm';
+关于该查询要注意的几件事情：
+
+FROM子句列出两个表，因为查询需要从两个表提取信息。 
+当从多个表组合(联结)信息时，你需要指定一个表中的记录怎样能匹配其它表的记录。这很简单，因为它们都有一个name列。
+查询使用WHERE子句基于name值来匹配2个表中的记录。 
+因为name列出现在两个表中，当引用列时，你一定要指定哪个表。把表名附在列名前即可以实现。 
+你不必有2个不同的表来进行联结。如果你想要将一个表的记录与同一个表的其它记录进行比较，
+可以将一个表联结到自身。例如，为了在你的宠物之中繁殖配偶，你可以用pet联结自身来进行相似种类的雄雌配对：
+.#列的最大值
+SELECT MAX(article) AS article FROM shop;
+.#示例表的模板
+mysql> CREATE TABLE shop (
+    -> article INT(4) UNSIGNED ZEROFILL DEFAULT '0000' NOT NULL,
+    -> dealer  CHAR(20)                 DEFAULT ''     NOT NULL,
+    -> price   DOUBLE(16,2)             DEFAULT '0.00' NOT NULL,
+    -> PRIMARY KEY(article, dealer));
+附带添加值
+mysql> INSERT INTO shop VALUES
+    -> (1,'A',3.45),(1,'B',3.99),(2,'A',10.99),(3,'B',1.45),
+    -> (3,'C',1.69),(3,'D',1.25),(4,'D',19.95);
+.#拥有某个列的最大值的行
+SELECT article, dealer, price
+FROM   shop
+WHERE  price=(SELECT MAX(price) FROM shop);
+按升降序解决
+SELECT article, dealer, price
+FROM shop
+ORDER BY price DESC
+LIMIT 1;
+.#列的最大值（按组）
+SELECT article, MAX(price) AS price
+FROM   shop
+GROUP BY article
+.拥有某个字段的组间最大值的行
+SELECT article, dealer, price
+FROM   shop s1
+WHERE  price=(SELECT MAX(s2.price)
+              FROM shop s2
+              WHERE s1.article = s2.article);
+.#使用用户变量
+例 要找出价格最高或最低的物品的
+mysql> SELECT @min_price:=MIN(price),@max_price:=MAX(price) FROM shop;
+mysql> SELECT * FROM shop WHERE price=@min_price OR price=@max_price;
+.#使用外键
+使用作为联接列创建的列
+CREATE TABLE person (
+    id SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    name CHAR(60) NOT NULL,
+    PRIMARY KEY (id)
+);
+
+CREATE TABLE shirt (
+    id SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    style ENUM('t-shirt', 'polo', 'dress') NOT NULL,
+    color ENUM('red', 'blue', 'orange', 'white', 'black') NOT NULL,
+    owner SMALLINT UNSIGNED NOT NULL REFERENCES person(id),
+    PRIMARY KEY (id)
+);
+
+INSERT INTO person VALUES (NULL, 'Antonio Paz');
+
+SELECT @last := LAST_INSERT_ID();
+
+INSERT INTO shirt VALUES
+(NULL, 'polo', 'blue', @last),
+(NULL, 'dress', 'white', @last),
+(NULL, 't-shirt', 'blue', @last);
+
+.#根据两个键搜索
+可以充分利用使用单关键字的OR子句，如同AND的处理。
+一个比较灵活的例子是寻找两个通过OR组合到一起的关键字：
+SELECT field1_index, field2_index FROM test_table
+WHERE field1_index = '1' OR  field2_index = '1'
+还可以使用UNION将两个单独的SELECT语句的输出合成到一起来更有效地解决该问题
+SELECT field1_index, field2_index
+    FROM test_table WHERE field1_index = '1'
+UNION
+SELECT field1_index, field2_index
+    FROM test_table WHERE field2_index = '1';
+！！！！zerofill 如果插入的值不满足定义的长度会自动补0
+例如 int（3） insert 10 最后查询得到的结果就是010
+unsigned 增加长度 所选列的类型的长度乘以2
+.#根据天计算访问量
+使用位组函数来计算每个月中用户访问网页的天数
+CREATE TABLE t1 (year YEAR(4), month INT(2) UNSIGNED ZEROFILL,
+             day INT(2) UNSIGNED ZEROFILL);
+INSERT INTO t1 VALUES(2000,1,1),(2000,1,20),(2000,1,30),(2000,2,2),
+            (2000,2,23),(2000,2,23);
+示例表中含有代表用户访问网页的年－月－日值。可以使用以下查询来确定每个月的访问天数：
+SELECT year,month,BIT_COUNT(BIT_OR(1<<day)) AS days FROM t1
+       GROUP BY year,month;
+该查询计算了在表中按年/月组合的不同天数，可以自动去除重复的询问。
+.#使用auto_increment 主键自增
+CREATE TABLE animals (
+     id MEDIUMINT NOT NULL AUTO_INCREMENT,
+     name CHAR(30) NOT NULL,
+     PRIMARY KEY (id)
+ );
+ 插入时可以用写自增的值
+ INSERT INTO animals (name) VALUES 
+    ('dog'),('cat'),('penguin'),
+    ('lax'),('whale'),('ostrich');
+
+
+
+
